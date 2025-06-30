@@ -618,18 +618,18 @@ class VideoProcessor:
             
             # Process videos in batches to optimize memory usage
             batch_size = max_workers * 2
-            total_batches = (len(segment_pairs) + batch_size - 1) // batch_size
+            total_batches = (len(segment_data) + batch_size - 1) // batch_size
             
             for batch_num in range(total_batches):
                 start_idx = batch_num * batch_size
-                end_idx = min(start_idx + batch_size, len(segment_pairs))
-                batch_pairs = segment_pairs[start_idx:end_idx]
+                end_idx = min(start_idx + batch_size, len(segment_data))
+                batch_data = segment_data[start_idx:end_idx]
                 
-                self.logger.info(f"Processing batch {batch_num + 1}/{total_batches} with {len(batch_pairs)} videos")
+                self.logger.info(f"Processing batch {batch_num + 1}/{total_batches} with {len(batch_data)} videos")
                 
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     future_to_segment = {executor.submit(process_single_short, data): data 
-                                       for data in batch_pairs}
+                                       for data in batch_data}
                     
                     for future in as_completed(future_to_segment):
                         try:
@@ -643,8 +643,8 @@ class VideoProcessor:
                 gc.collect()
                 
                 # Update progress
-                completed_videos = min(end_idx, len(segment_pairs))
-                progress = 70 + int((completed_videos / len(segment_pairs)) * 15)  # Reserve 5% for thumbnails
+                completed_videos = min(end_idx, len(segment_data))
+                progress = 70 + int((completed_videos / len(segment_data)) * 15)  # Reserve 5% for thumbnails
                 self._update_job_status(job, ProcessingStatus.EDITING, progress)
             
             # Generate all thumbnails in parallel after video processing
