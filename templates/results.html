@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}Results - YouTube Shorts Generator{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Job Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Processing Complete
+                        </h3>
+                        <span class="badge bg-success fs-6">{{ shorts|length }} Short{{ 's' if shorts|length != 1 else '' }} Generated</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5>{{ job.title }}</h5>
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-link me-1"></i>
+                        <a href="{{ job.youtube_url }}" target="_blank" class="text-decoration-none">
+                            Original Video
+                        </a>
+                    </p>
+                    
+                    {% if job.video_info %}
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="border rounded p-2">
+                                <i class="fas fa-clock text-primary"></i>
+                                <div class="small">Duration</div>
+                                <strong>{{ (job.video_info.duration // 60) }}:{{ '%02d' % (job.video_info.duration % 60) }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-2">
+                                <i class="fas fa-video text-info"></i>
+                                <div class="small">Quality</div>
+                                <strong>{{ job.video_info.width }}x{{ job.video_info.height }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-2">
+                                <i class="fas fa-cut text-warning"></i>
+                                <div class="small">Shorts Created</div>
+                                <strong>{{ shorts|length }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-2">
+                                <i class="fas fa-calendar text-success"></i>
+                                <div class="small">Processed</div>
+                                <strong>{{ job.created_at.strftime('%m/%d/%Y') }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- YouTube Connection Status -->
+    {% if not youtube_connected %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info border-0 shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fab fa-youtube me-2 text-danger fs-4"></i>
+                        <strong>🚀 YouTube Account Connect करें</strong> 
+                        <br><small class="text-muted">अपने generated shorts को automatically upload करने के लिए</small>
+                    </div>
+                    <a href="{{ url_for('youtube_auth') }}" class="btn btn-danger btn-lg">
+                        <i class="fab fa-youtube me-1"></i>Connect करें 🔗
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Generated Shorts -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="mb-4">Generated Shorts</h3>
+        </div>
+    </div>
+
+    {% if shorts %}
+        {% for short in shorts %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-video me-2"></i>
+                                {{ short.title or 'Short #' + short.id|string }}
+                            </h5>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary me-2">
+                                    Score: {{ (short.overall_score * 100)|round|int }}%
+                                </span>
+                                {% if short.upload_status %}
+                                    {% if short.upload_status.value == 'completed' %}
+                                        <span class="badge bg-success">
+                                            <i class="fab fa-youtube me-1"></i>Uploaded
+                                        </span>
+                                    {% elif short.upload_status.value == 'uploading' %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-spinner fa-spin me-1"></i>Uploading
+                                        </span>
+                                    {% elif short.upload_status.value == 'failed' %}
+                                        <span class="badge bg-danger">Upload Failed</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Video Preview -->
+                            <div class="col-md-4">
+                                {% if short.output_path %}
+                                <div class="video-container mb-3">
+                                    <video controls class="w-100 rounded" style="max-height: 400px;">
+                                        <source src="{{ url_for('download_short', short_id=short.id) }}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="text-center">
+                                    <div class="d-grid gap-2">
+                                        <!-- Primary YouTube Upload Button -->
+                                        {% if youtube_connected %}
+                                            {% if not short.upload_status or short.upload_status.value == 'pending' %}
+                                            <form method="POST" action="{{ url_for('upload_short', short_id=short.id) }}" class="mb-2">
+                                                <button type="submit" class="btn btn-danger btn-lg w-100">
+                                                    <i class="fab fa-youtube me-2"></i>
+                                                    YouTube पर Upload करें 🚀
+                                                </button>
+                                            </form>
+                                            {% elif short.upload_status.value == 'uploading' %}
+                                            <button class="btn btn-warning btn-lg w-100 mb-2" disabled>
+                                                <i class="fas fa-spinner fa-spin me-2"></i>
+                                                Uploading... कृपया प्रतीक्षा करें
+                                            </button>
+                                            {% elif short.upload_status.value == 'completed' and short.youtube_video_id %}
+                                            <a href="https://www.youtube.com/watch?v={{ short.youtube_video_id }}" 
+                                               target="_blank" class="btn btn-success btn-lg w-100 mb-2">
+                                                <i class="fas fa-external-link-alt me-2"></i>
+                                                YouTube पर देखें ✅
+                                            </a>
+                                            {% endif %}
+                                        {% else %}
+                                            <a href="{{ url_for('youtube_auth') }}" class="btn btn-danger btn-lg w-100 mb-2">
+                                                <i class="fab fa-youtube me-2"></i>
+                                                YouTube से Connect करें 🔗
+                                            </a>
+                                        {% endif %}
+                                        
+                                        <!-- Secondary Download Button -->
+                                        <a href="{{ url_for('download_short', short_id=short.id) }}" 
+                                           class="btn btn-outline-primary">
+                                            <i class="fas fa-download me-1"></i>Download करें 📥
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Metadata and Analysis -->
+                            <div class="col-md-8">
+                                <!-- Video Info -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-2 text-center">
+                                            <i class="fas fa-clock text-primary"></i>
+                                            <div class="small">Duration</div>
+                                            <strong>{{ short.duration|round(1) }}s</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-2 text-center">
+                                            <i class="fas fa-clock text-info"></i>
+                                            <div class="small">Timestamp</div>
+                                            <strong>{{ (short.start_time // 60)|int }}:{{ '%02d' % (short.start_time % 60)|int }} - {{ (short.end_time // 60)|int }}:{{ '%02d' % (short.end_time % 60)|int }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- AI Analysis Scores -->
+                                <div class="mb-3">
+                                    <h6>AI Analysis Scores</h6>
+                                    <div class="row">
+                                        <div class="col-6 col-md-3 mb-2">
+                                            <div class="text-center">
+                                                <div class="small text-muted">Engagement</div>
+                                                <div class="progress progress-sm">
+                                                    <div class="progress-bar bg-primary" style="width: {{ (short.engagement_score * 100)|round }}%"></div>
+                                                </div>
+                                                <small>{{ (short.engagement_score * 100)|round }}%</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3 mb-2">
+                                            <div class="text-center">
+                                                <div class="small text-muted">Emotion</div>
+                                                <div class="progress progress-sm">
+                                                    <div class="progress-bar bg-info" style="width: {{ (short.emotion_score * 100)|round }}%"></div>
+                                                </div>
+                                                <small>{{ (short.emotion_score * 100)|round }}%</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3 mb-2">
+                                            <div class="text-center">
+                                                <div class="small text-muted">Viral Potential</div>
+                                                <div class="progress progress-sm">
+                                                    <div class="progress-bar bg-warning" style="width: {{ (short.viral_potential * 100)|round }}%"></div>
+                                                </div>
+                                                <small>{{ (short.viral_potential * 100)|round }}%</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3 mb-2">
+                                            <div class="text-center">
+                                                <div class="small text-muted">Quotability</div>
+                                                <div class="progress progress-sm">
+                                                    <div class="progress-bar bg-success" style="width: {{ (short.quotability * 100)|round }}%"></div>
+                                                </div>
+                                                <small>{{ (short.quotability * 100)|round }}%</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Title and Description -->
+                                <div class="mb-3">
+                                    <h6>🎯 Generated Metadata (Hindi/Hinglish)</h6>
+                                    <div class="mb-2">
+                                        <label class="form-label small text-muted">📝 Title:</label>
+                                        <input type="text" class="form-control form-control-sm" value="{{ short.title }}" readonly style="font-size: 14px;">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small text-muted">📄 Description:</label>
+                                        <textarea class="form-control form-control-sm" rows="4" readonly style="font-size: 12px;">{{ short.description }}</textarea>
+                                    </div>
+                                    {% if short.tags %}
+                                    <div class="mb-2">
+                                        <label class="form-label small text-muted">🏷️ Tags:</label>
+                                        <div>
+                                            {% for tag in short.tags %}
+                                            <span class="badge bg-info me-1 mb-1" style="font-size: 11px;">{{ tag }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Keywords and Emotions -->
+                                {% if short.keywords or short.emotions_detected %}
+                                <div class="mb-3">
+                                    <h6>AI Analysis Details</h6>
+                                    {% if short.emotions_detected %}
+                                    <div class="mb-2">
+                                        <small class="text-muted">Emotions:</small>
+                                        {% for emotion in short.emotions_detected %}
+                                        <span class="badge bg-info me-1">{{ emotion }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    {% if short.keywords %}
+                                    <div class="mb-2">
+                                        <small class="text-muted">Keywords:</small>
+                                        {% for keyword in short.keywords %}
+                                        <span class="badge bg-secondary me-1">{{ keyword }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    {% if short.analysis_notes %}
+                                    <div>
+                                        <small class="text-muted">AI Notes:</small>
+                                        <p class="small">{{ short.analysis_notes }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if short.upload_error %}
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Upload Error:</strong> {{ short.upload_error }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="row">
+            <div class="col-12 text-center">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    No shorts were generated. This might be due to content analysis not finding suitable segments.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg me-2">
+                <i class="fas fa-plus me-1"></i>
+                Create More Shorts
+            </a>
+            <form method="POST" action="{{ url_for('delete_job', job_id=job.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-outline-danger" 
+                        onclick="return confirm('Are you sure you want to delete this job and all associated files?')">
+                    <i class="fas fa-trash me-1"></i>
+                    Delete Job
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.progress-sm {
+    height: 8px;
+}
+.video-container {
+    position: relative;
+    max-width: 100%;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}YouTube Shorts Generator - Create Viral Shorts with AI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-lg-8 mx-auto text-center">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-magic me-3 text-primary"></i>
+                AI-Powered YouTube Shorts Generator
+            </h1>
+            <p class="lead mb-4">
+                Transform any YouTube video into engaging vertical shorts with the power of Gemini AI.
+                Automatic content analysis, vertical cropping, and metadata generation.
+            </p>
+
+            {% if not youtube_connected %}
+                <div class="alert alert-info mb-4">
+                    <i class="fab fa-youtube me-2"></i>
+                    <strong>Connect your YouTube account</strong> to automatically upload generated shorts.
+                    <a href="{{ url_for('youtube_auth') }}" class="btn btn-sm btn-outline-primary ms-2">
+                        Connect Now
+                    </a>
+                </div>
+            {% else %}
+                <div class="alert alert-success mb-4">
+                    <i class="fab fa-youtube me-2"></i>
+                    <strong>YouTube Connected!</strong> Your shorts will be automatically uploaded.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Form -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-link me-2"></i>
+                        Generate Shorts from YouTube Video
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('submit_video') }}">
+                        <!-- Language Selection -->
+                        <div class="mb-4">
+                            <label for="language" class="form-label">भाषा / Language</label>
+                            <select class="form-select" id="language" name="language">
+                                <option value="hinglish" selected>🇮🇳 Hinglish (Hindi + English Mix)</option>
+                                <option value="hindi">🕉️ हिंदी (Pure Hindi)</option>
+                                <option value="english">🇺🇸 English</option>
+                            </select>
+                            <div class="form-text">
+                                Choose language for titles, descriptions, and tags
+                            </div>
+                        </div>
+
+                        <!-- Auto Upload Option -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="auto_upload" name="auto_upload" value="1" {% if youtube_connected %}checked{% endif %} {% if not youtube_connected %}disabled{% endif %}>
+                                <label class="form-check-label" for="auto_upload">
+                                    <i class="fab fa-youtube text-danger me-2"></i>
+                                    Auto-upload shorts to YouTube
+                                </label>
+                                {% if not youtube_connected %}
+                                    <div class="form-text text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Connect your YouTube account to enable auto-upload
+                                    </div>
+                                {% else %}
+                                    <div class="form-text text-success">
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        Shorts will be automatically uploaded to your YouTube channel
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="youtube_url" class="form-label">YouTube Video URL</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fab fa-youtube text-danger"></i>
+                                    </span>
+                                    <input type="url" 
+                                           class="form-control form-control-lg" 
+                                           id="youtube_url" 
+                                           name="youtube_url" 
+                                           placeholder="https://www.youtube.com/watch?v=..." 
+                                           required>
+                                </div>
+                                <div class="form-text">
+                                    Paste any YouTube video URL to generate shorts automatically
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="video_quality" class="form-label">Video Quality</label>
+                                <select class="form-select" id="video_quality" name="video_quality">
+                                    <option value="1080p" selected>1080p (Full HD)</option>
+                                    <option value="720p">720p (HD)</option>
+                                    <option value="best">Best Available</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="aspect_ratio" class="form-label">Output Aspect Ratio</label>
+                                <select class="form-select" id="aspect_ratio" name="aspect_ratio">
+                                    <option value="9:16" selected>9:16 (Vertical - Recommended)</option>
+                                    <option value="1:1">1:1 (Square)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="num_shorts" class="form-label">Number of Shorts to Create</label>
+                                <select class="form-select" id="num_shorts" name="num_shorts">
+                                    <option value="1">1 Short</option>
+                                    <option value="2">2 Shorts</option>
+                                    <option value="3" selected>3 Shorts</option>
+                                    <option value="4">4 Shorts</option>
+                                    <option value="5">5 Shorts</option>
+                                    <option value="10">10 Shorts (Max)</option>
+                                </select>
+                                <div class="form-text">More shorts = longer processing time</div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="short_length" class="form-label">Short Length</label>
+                                <select class="form-select" id="short_length" name="short_length">
+                                    <option value="15">15 seconds</option>
+                                    <option value="30" selected>30 seconds</option>
+                                    <option value="45">45 seconds</option>
+                                    <option value="60">60 seconds</option>
+                                </select>
+                                <div class="form-text">Shorter clips = higher engagement</div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-magic me-2"></i>
+                            Generate Shorts with AI
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="text-center mb-4">How It Works</h2>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="text-center">
+                <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-download text-white fa-lg"></i>
+                </div>
+                <h5>1. Download</h5>
+                <p class="text-muted">High-quality video download in 1080p Full HD</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="text-center">
+                <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-brain text-white fa-lg"></i>
+                </div>
+                <h5>2. AI Analysis</h5>
+                <p class="text-muted">Gemini AI finds the most engaging moments</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="text-center">
+                <div class="bg-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-cut text-white fa-lg"></i>
+                </div>
+                <h5>3. Edit</h5>
+                <p class="text-muted">Automatic vertical cropping and optimization</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="text-center">
+                <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-upload text-white fa-lg"></i>
+                </div>
+                <h5>4. Upload</h5>
+                <p class="text-muted">Direct upload to your YouTube channel</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Jobs -->
+    {% if recent_jobs %}
+    <div class="row">
+        <div class="col-12">
+            <h3 class="mb-4">
+                <i class="fas fa-history me-2"></i>
+                Recent Jobs
+            </h3>
+            <div class="row">
+                {% for job in recent_jobs %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ job.title[:50] + '...' if job.title and job.title|length > 50 else (job.title or 'Processing...') }}</h6>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ job.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-{{ 'success' if job.status.value == 'completed' else 'primary' if job.status.value in ['pending', 'downloading', 'transcribing', 'analyzing', 'editing'] else 'danger' }}">
+                                    {{ job.status.value.title() }}
+                                </span>
+                                {% if job.status.value == 'completed' %}
+                                    <a href="{{ url_for('results', job_id=job.id) }}" class="btn btn-sm btn-outline-primary">
+                                        View Results
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('process', job_id=job.id) }}" class="btn btn-sm btn-outline-secondary">
+                                        View Status
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="text-center mt-3">
+                <a href="{{ url_for('list_jobs') }}" class="btn btn-outline-primary me-3">
+                    <i class="fas fa-list me-1"></i>
+                    View All Jobs
+                </a>
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clearDataModal">
+                    <i class="fas fa-broom me-1"></i>
+                    Clear Cache & Data
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Clear Cache & Data Confirmation Modal -->
+<div class="modal fade" id="clearDataModal" tabindex="-1" aria-labelledby="clearDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="clearDataModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Clear Cache & Data
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>⚠️ DANGER ZONE:</strong> This action is permanent and cannot be undone!
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-danger"><i class="fas fa-database me-2"></i>Database & Files</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-database text-danger me-2"></i> All video processing jobs</li>
+                            <li><i class="fas fa-video text-danger me-2"></i> Generated shorts & thumbnails</li>
+                            <li><i class="fas fa-file-alt text-danger me-2"></i> Transcripts & analysis data</li>
+                            <li><i class="fas fa-key text-danger me-2"></i> YouTube account connections</li>
+                            <li><i class="fas fa-folder text-danger me-2"></i> Upload/output directories</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-warning"><i class="fas fa-memory me-2"></i>Cache & System</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-code-branch text-warning me-2"></i> Git history (.git folder)</li>
+                            <li><i class="fas fa-memory text-warning me-2"></i> Python cache (__pycache__)</li>
+                            <li><i class="fas fa-file text-warning me-2"></i> Temporary processing files</li>
+                            <li><i class="fas fa-cog text-warning me-2"></i> Session data & cookies</li>
+                            <li><i class="fas fa-trash text-warning me-2"></i> All system artifacts</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>After clearing:</strong> You'll need to reconnect your YouTube account and all processing history will be lost.
+                </div>
+
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" id="confirmClear" required>
+                    <label class="form-check-label fw-bold text-danger" for="confirmClear">
+                        I understand this will permanently delete all data, cache, and system files
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>
+                    Cancel
+                </button>
+                <form method="POST" action="{{ url_for('clear_all_data') }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger" id="clearDataBtn" disabled>
+                        <i class="fas fa-nuclear me-1"></i>
+                        CLEAR ALL DATA & CACHE
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enable/disable clear button based on checkbox
+document.getElementById('confirmClear').addEventListener('change', function() {
+    document.getElementById('clearDataBtn').disabled = !this.checked;
+});
+</script>
+{% endblock %}

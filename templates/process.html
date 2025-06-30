@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Processing Video - YouTube Shorts Generator{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Job Header -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-cog fa-spin me-2"></i>
+                            Processing Video
+                        </h3>
+                        <span class="badge bg-primary fs-6" id="status-badge">
+                            {{ job.status.value.title() }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 id="video-title">{{ job.title or 'Loading video information...' }}</h5>
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-link me-1"></i>
+                        <a href="{{ job.youtube_url }}" target="_blank" class="text-decoration-none">
+                            {{ job.youtube_url }}
+                        </a>
+                    </p>
+                    
+                    {% if job.video_info %}
+                    <div class="row text-center">
+                        {% if job.video_info.duration %}
+                        <div class="col-md-3">
+                            <div class="border rounded p-2">
+                                <i class="fas fa-clock text-primary"></i>
+                                <div class="small">Duration</div>
+                                <strong>{{ (job.video_info.duration // 60) }}:{{ '%02d' % (job.video_info.duration % 60) }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if job.video_info.width and job.video_info.height %}
+                        <div class="col-md-3">
+                            <div class="border rounded p-2">
+                                <i class="fas fa-video text-info"></i>
+                                <div class="small">Resolution</div>
+                                <strong>{{ job.video_info.width }}x{{ job.video_info.height }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if job.video_info.uploader %}
+                        <div class="col-md-3">
+                            <div class="border rounded p-2">
+                                <i class="fas fa-user text-success"></i>
+                                <div class="small">Channel</div>
+                                <strong>{{ job.video_info.uploader[:15] + '...' if job.video_info.uploader|length > 15 else job.video_info.uploader }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if job.video_info.view_count %}
+                        <div class="col-md-3">
+                            <div class="border rounded p-2">
+                                <i class="fas fa-eye text-warning"></i>
+                                <div class="small">Views</div>
+                                <strong>{{ '{:,}'.format(job.video_info.view_count) }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Progress Card -->
+            <div class="card shadow mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0">Processing Progress</h5>
+                        <span class="badge bg-info" id="progress-percent">{{ job.progress }}%</span>
+                    </div>
+                    
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             id="progress-bar"
+                             style="width: {{ job.progress }}%"
+                             aria-valuenow="{{ job.progress }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+                    
+                    <p class="mb-1" id="status-text">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="current-status">Loading status...</span>
+                    </p>
+                    
+                    {% if job.error_message %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error:</strong> {{ job.error_message }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Processing Steps -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list-ol me-2"></i>
+                        Processing Steps
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex align-items-center" id="step-download">
+                                    <i class="fas fa-download me-3 text-muted"></i>
+                                    <div>
+                                        <strong>Download Video</strong>
+                                        <div class="small text-muted">High-quality video download</div>
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex align-items-center" id="step-transcribe">
+                                    <i class="fas fa-file-audio me-3 text-muted"></i>
+                                    <div>
+                                        <strong>Extract Audio</strong>
+                                        <div class="small text-muted">Audio processing and segmentation</div>
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex align-items-center" id="step-analyze">
+                                    <i class="fas fa-brain me-3 text-muted"></i>
+                                    <div>
+                                        <strong>AI Analysis</strong>
+                                        <div class="small text-muted">Gemini AI content analysis</div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex align-items-center" id="step-edit">
+                                    <i class="fas fa-cut me-3 text-muted"></i>
+                                    <div>
+                                        <strong>Generate Shorts</strong>
+                                        <div class="small text-muted">Vertical video creation</div>
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex align-items-center" id="step-upload">
+                                    <i class="fas fa-upload me-3 text-muted"></i>
+                                    <div>
+                                        <strong>Upload</strong>
+                                        <div class="small text-muted">YouTube upload (if connected)</div>
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex align-items-center" id="step-complete">
+                                    <i class="fas fa-check me-3 text-muted"></i>
+                                    <div>
+                                        <strong>Complete</strong>
+                                        <div class="small text-muted">Ready for review</div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    <div id="loading-actions">
+                        <button class="btn btn-outline-secondary me-2" onclick="location.reload()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Refresh Status
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-home me-1"></i>
+                            Back to Home
+                        </a>
+                    </div>
+                    
+                    <div id="completed-actions" style="display: none;">
+                        <a href="{{ url_for('results', job_id=job.id) }}" class="btn btn-success btn-lg me-2">
+                            <i class="fas fa-eye me-1"></i>
+                            View Results
+                        </a>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-plus me-1"></i>
+                            Process Another Video
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh status every 3 seconds
+let statusInterval = setInterval(function() {
+    fetch(`/api/status/{{ job.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            updateStatus(data);
+        })
+        .catch(error => {
+            console.error('Error fetching status:', error);
+        });
+}, 3000);
+
+function updateStatus(data) {
+    // Update progress bar
+    document.getElementById('progress-bar').style.width = data.progress + '%';
+    document.getElementById('progress-bar').setAttribute('aria-valuenow', data.progress);
+    document.getElementById('progress-percent').textContent = data.progress + '%';
+    
+    // Update status badge
+    const statusBadge = document.getElementById('status-badge');
+    statusBadge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+    
+    // Update current status text
+    document.getElementById('current-status').textContent = data.current_status_text;
+    
+    // Update video title if available
+    if (data.title) {
+        document.getElementById('video-title').textContent = data.title;
+    }
+    
+    // Update step icons based on status
+    updateStepIcons(data.status);
+    
+    // Handle completion
+    if (data.status === 'completed') {
+        clearInterval(statusInterval);
+        statusBadge.className = 'badge bg-success fs-6';
+        document.getElementById('loading-actions').style.display = 'none';
+        document.getElementById('completed-actions').style.display = 'block';
+        
+        // Show shorts count if available
+        if (data.shorts_count > 0) {
+            document.getElementById('current-status').innerHTML = 
+                `<i class="fas fa-check-circle me-2 text-success"></i>Generated ${data.shorts_count} short video${data.shorts_count > 1 ? 's' : ''}!`;
+        }
+    } else if (data.status === 'failed') {
+        clearInterval(statusInterval);
+        statusBadge.className = 'badge bg-danger fs-6';
+        document.getElementById('progress-bar').className = 'progress-bar bg-danger';
+    }
+}
+
+function updateStepIcons(status) {
+    const steps = {
+        'downloading': 'step-download',
+        'transcribing': 'step-transcribe', 
+        'analyzing': 'step-analyze',
+        'editing': 'step-edit',
+        'uploading': 'step-upload',
+        'completed': 'step-complete'
+    };
+    
+    // Reset all step icons
+    Object.values(steps).forEach(stepId => {
+        const icon = document.querySelector(`#${stepId} i`);
+        icon.className = icon.className.replace(/text-\w+/, 'text-muted');
+    });
+    
+    // Highlight current and completed steps
+    let currentFound = false;
+    Object.entries(steps).forEach(([stepStatus, stepId]) => {
+        const icon = document.querySelector(`#${stepId} i`);
+        if (stepStatus === status && !currentFound) {
+            icon.className = icon.className.replace('text-muted', 'text-primary');
+            currentFound = true;
+        } else if (!currentFound) {
+            icon.className = icon.className.replace('text-muted', 'text-success');
+        }
+    });
+}
+
+// Initial status update
+fetch(`/api/status/{{ job.id }}`)
+    .then(response => response.json())
+    .then(data => {
+        updateStatus(data);
+    })
+    .catch(error => {
+        console.error('Error fetching initial status:', error);
+    });
+</script>
+{% endblock %}
